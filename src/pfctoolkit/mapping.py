@@ -38,6 +38,7 @@ def process_chunk(chunk, rois, config):
     if image_type == "volume":
         brain_masker = tools.NiftiMasker(datasets.get_img(config.get("mask")))
         chunk_masker = tools.NiftiMasker(
+            # This line will also need to be changed to pull the image from s3
             image.math_img(f"img=={chunk}", img=config.get("chunk_idx"))
         )
     elif image_type == "surface":

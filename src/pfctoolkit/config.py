@@ -45,6 +45,8 @@ class Config:
             exist.
         """
         checks = ["avgr", "fz", "t", "combo", "std", "norm", "chunk_idx"]
+        # This line will need to be changed to check if the path exists in s3 storage
+        # Assuming all of the checks are stored in s3 (we could have the smaller files, like norm, chunk_idx, etc. stored locally)
         return all(list(map(os.path.exists, [self.config[key] for key in checks])))
 
     def get(self, key):
