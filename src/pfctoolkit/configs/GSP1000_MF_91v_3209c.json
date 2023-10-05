@@ -1,0 +1,16 @@
+{
+    "name": "GSP1000_MF_91v_3209c",
+    "mask": "MNI152_T1_2mm_brain_mask_dil",
+    "brain_size": 292019,
+    "avgr": "/Volumes/discovery/precomputed_connectomes/GSP1000_MF_91v_3209c/AvgR",
+    "fz": "/Volumes/discovery/precomputed_connectomes/GSP1000_MF_91v_3209c/AvgR_Fz",
+    "t": "/Volumes/discovery/precomputed_connectomes/GSP1000_MF_91v_3209c/T",
+    "combo": "/Volumes/discovery/precomputed_connectomes/GSP1000_MF_91v_3209c/Combo",
+    "std": "/Volumes/discovery/precomputed_connectomes/GSP1000_MF_91v_3209c/GSP1000_MF_std_weighted_mask.nii.gz",
+    "norm": "/Volumes/discovery/precomputed_connectomes/GSP1000_MF_91v_3209c/GSP1000_MF_norm_weighted_mask.nii.gz",
+    "chunk_name": "MNI152_2mm_dil_91v_3209c",
+    "num_chunks": 91,
+    "chunk_size": 3209,
+    "chunk_idx": "/Volumes/discovery/chunks/MNI152_2mm_dil_91v_3209c/chunk_idx.nii.gz",
+    "type": "volume"
+}
