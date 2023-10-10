@@ -10,7 +10,7 @@ from nilearn import image
 from pfctoolkit import tools, datasets, surface
 
 
-def process_chunk(chunk, rois, config):
+def process_chunk(chunk, rois, config, s3_storage=None):
     """Compute chunk contribution to FC maps for a given list of ROIs.
 
     Parameters
@@ -21,6 +21,8 @@ def process_chunk(chunk, rois, config):
         List of ROI paths to be processed.
     config : pfctoolkit.config.Config
         Configuration of the precomputed connectome.
+    s3_storage :   pfctoolkit.s3_tools.S3Storage or None
+        Only used if the precomputed connectome is stored on S3.
 
     Returns
     -------
@@ -36,24 +38,28 @@ def process_chunk(chunk, rois, config):
     }
     image_type = config.get("type")
     if image_type == "volume":
-        brain_masker = tools.NiftiMasker(datasets.get_img(config.get("mask")))
-        chunk_masker = tools.NiftiMasker(
-            # This line will also need to be changed to pull the image from s3
-            image.math_img(f"img=={chunk}", img=config.get("chunk_idx"))
-        )
+        brain_masker = tools.NiftiMasker(datasets.get_img(config.get("mask")), s3_storage)
+        if s3_storage:
+            chunk_masker = tools.NiftiMasker(
+                image.math_img(f"img=={chunk}", img=s3_storage.get_file_from_cloud(config.get("chunk_idx"))), s3_storage
+            )
+        else:
+            chunk_masker = tools.NiftiMasker(
+                image.math_img(f"img=={chunk}", img=config.get("chunk_idx"))
+            )
     elif image_type == "surface":
         brain_masker = surface.GiftiMasker(datasets.get_img(config.get("mask")))
         chunk_masker = surface.GiftiMasker(
             surface.new_gifti_image(
-                datasets.get_img(config.get("chunk_idx")).agg_data() == chunk
+                s3_storage.get_file_from_cloud(config.get("chunk_idx")).agg_data() == chunk
             )
         )
-    brain_weights = np.array([brain_masker.transform(roi) for roi in rois])
-    chunk_weights = np.array([chunk_masker.transform(roi) for roi in rois])
+    brain_weights = np.array([brain_masker.transform(roi, None, s3_storage) for roi in rois])
+    chunk_weights = np.array([chunk_masker.transform(roi, None, s3_storage) for roi in rois])
     brain_masks = np.array([(weights != 0) for weights in brain_weights])
     chunk_masks = np.array([(weights != 0) for weights in chunk_weights])
-    norm_weight = chunk_masker.transform(config.get("norm"))
-    std_weight = chunk_masker.transform(config.get("std"))
+    norm_weight = chunk_masker.transform(config.get("norm"), None, s3_storage)
+    std_weight = chunk_masker.transform(config.get("std"), None, s3_storage)
 
     norm_chunk_masks, std_chunk_masks = compute_chunk_masks(
         chunk_weights, norm_weight, std_weight
@@ -65,9 +71,13 @@ def process_chunk(chunk, rois, config):
         ("t", "T"),
         ("combo", "Combo"),
     ]:
-        chunk_data = np.load(
-            os.path.join(chunk_paths[chunk_type[0]], f"{chunk}_{chunk_type[1]}.npy")
-        )
+        if s3_storage:
+            print(f"Starting load of {chunk_type} chunk from s3, from path:" + os.path.join(chunk_paths[chunk_type[0]], f"{chunk}_{chunk_type[1]}.npy"))
+            chunk_data = s3_storage.get_file_from_cloud(os.path.join(chunk_paths[chunk_type[0]], f"{chunk}_{chunk_type[1]}.npy"))
+        else:
+            chunk_data = np.load(
+                os.path.join(chunk_paths[chunk_type[0]], f"{chunk}_{chunk_type[1]}.npy")
+            )
         expected_shape = (config.get("chunk_size"), config.get("brain_size"))
         if chunk_data.shape != expected_shape:
             raise TypeError(
@@ -139,7 +149,7 @@ def update_atlas(contribution, atlas):
     return atlas
 
 
-def publish_atlas(atlas, output_dir, config):
+def publish_atlas(atlas, output_dir, config, s3_storage=None):
     """Runs final computation on the atlas and outputs network maps to file.
 
     Parameters
@@ -152,10 +162,12 @@ def publish_atlas(atlas, output_dir, config):
         Configuration of the precomputed connectome.
 
     """
-    output_dir = os.path.abspath(output_dir)
+    if not s3_storage:
+        output_dir = os.path.abspath(output_dir)
+
     image_type = config.get("type")
     if image_type == "volume":
-        brain_masker = tools.NiftiMasker(datasets.get_img(config.get("mask")))
+        brain_masker = tools.NiftiMasker(datasets.get_img(config.get("mask")), s3_storage)
         extension = ".nii.gz"
     elif image_type == "surface":
         brain_masker = surface.GiftiMasker(datasets.get_img(config.get("mask")))
@@ -172,7 +184,11 @@ def publish_atlas(atlas, output_dir, config):
             output_path = os.path.join(output_dir, output_fname)
             atlas[roi][map_type[0]] = atlas[roi][map_type[0]] * scaling_factor
             out_img = brain_masker.inverse_transform(atlas[roi][map_type[0]])
-            out_img.to_filename(output_path)
+            if s3_storage:
+                out_img = s3_storage.compress_nii_image(out_img)
+                s3_storage.save(output_path, out_img)
+            else:
+                out_img.to_filename(output_path)
     print(f"Network maps output to {output_dir}")
     print("Done!")
 
