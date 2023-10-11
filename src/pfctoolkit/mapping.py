@@ -72,7 +72,7 @@ def process_chunk(chunk, rois, config, s3_storage=None):
         ("combo", "Combo"),
     ]:
         if s3_storage:
-            print(f"Starting load of {chunk_type} chunk from s3, from path:" + os.path.join(chunk_paths[chunk_type[0]], f"{chunk}_{chunk_type[1]}.npy"))
+            print(f"\n Starting load of {chunk_type} chunk from s3, from path:" + os.path.join(chunk_paths[chunk_type[0]], f"{chunk}_{chunk_type[1]}.npy"))
             chunk_data = s3_storage.get_file_from_cloud(os.path.join(chunk_paths[chunk_type[0]], f"{chunk}_{chunk_type[1]}.npy"))
         else:
             chunk_data = np.load(
@@ -182,6 +182,8 @@ def publish_atlas(atlas, output_dir, config, s3_storage=None):
         for map_type in [("avgr", "AvgR"), ("fz", "AvgR_Fz"), ("t", "T")]:
             output_fname = f"{subject_name}_Precom_{map_type[1]}{extension}"
             output_path = os.path.join(output_dir, output_fname)
+            if s3_storage:
+                output_path = output_path.replace("\\", "/")
             atlas[roi][map_type[0]] = atlas[roi][map_type[0]] * scaling_factor
             out_img = brain_masker.inverse_transform(atlas[roi][map_type[0]])
             if s3_storage:
