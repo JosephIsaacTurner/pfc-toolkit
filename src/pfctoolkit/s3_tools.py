@@ -4,6 +4,7 @@ import gzip
 from io import BytesIO
 import nibabel as nib
 import numpy as np
+import os
 
 class S3Storage:
 
@@ -12,7 +13,7 @@ class S3Storage:
         self.AWS_STORAGE_BUCKET_NAME = config.get("AWS_STORAGE_BUCKET_NAME")
         self.AWS_S3_ENDPOINT_URL = config.get("AWS_S3_ENDPOINT_URL")
         self.AWS_ACCESS_KEY_ID = config.get("AWS_ACCESS_KEY_ID")
-        self.AWS_SECRET_ACCESS_KEY = config.get("AWS_SECRET_ACCESS_KEY")
+        self.AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
     
     def save(self, name, content, max_length=None):
         headers = {'ContentType': ''}
