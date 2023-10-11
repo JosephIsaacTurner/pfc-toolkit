@@ -33,7 +33,15 @@ class Config:
             else:
                 raise OSError(f"Config {self.config['name']} unavailable")
         except FileNotFoundError:
-            raise FileNotFoundError(f"PCC config file {configfile} does not exist!")
+            try:
+                with open(str(pcc)) as js:
+                    self.config = json.load(js)
+                if self.check():
+                    print(f"Config {self.config['name']} loaded")
+                else:
+                    raise OSError(f"Config {self.config['name']} unavailable")
+            except:
+                raise FileNotFoundError(f"PCC config file {configfile} does not exist!")
 
     def check(self):
         """Check that all resources specified in config file are accessible and exist.
