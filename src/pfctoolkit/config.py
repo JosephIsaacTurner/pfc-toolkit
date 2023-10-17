@@ -24,25 +24,27 @@ class Config:
             Requsted config file does not exist.
         """
         home = os.path.expanduser('~')
-        configfile = os.path.join(home, f"pfctoolkit_config/{pcc}.json")
-        try:
-            with open(str(configfile)) as js:
-                self.config = json.load(js)
-            if self.check():
-                print(f"Config {self.config['name']} loaded")
-            else:
-                raise OSError(f"Config {self.config['name']} unavailable")
-        except FileNotFoundError:
-            print(f"PCC config file {configfile} does not exist. Trying another location...")
+        # Construct potential paths
+        default_path = os.path.join(home, "pfctoolkit_config", f"{pcc}.json")
+        path_without_extension = os.path.join(home, "pfctoolkit_config", pcc)
+        
+        potential_paths = [default_path, path_without_extension, pcc]
+
+        for path in potential_paths:
             try:
-                with open(str(pcc)) as js:
+                with open(path, 'r') as js:
                     self.config = json.load(js)
+                
                 if self.check():
                     print(f"Config {self.config['name']} loaded")
+                    return
                 else:
                     raise OSError(f"Config {self.config['name']} unavailable")
-            except:
-                raise FileNotFoundError(f"PCC config file {pcc} does not exist!")
+            except FileNotFoundError:
+                continue
+
+        raise FileNotFoundError(f"PCC config file {pcc} does not exist!")
+
 
     def check(self):
         """Check that all resources specified in config file are accessible and exist.
