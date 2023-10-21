@@ -46,7 +46,6 @@ setuptools.setup(
         "nibabel",
         "nilearn",
         "natsort",
-        "importlib",
     ],
     python_requires=">=3.6",
 )
