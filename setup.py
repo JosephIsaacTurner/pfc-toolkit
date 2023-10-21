@@ -45,7 +45,7 @@ setuptools.setup(
         "scipy",
         "nibabel",
         "nilearn",
-        "natsort",
+        "natsort"
     ],
     python_requires=">=3.6",
 )
