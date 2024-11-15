@@ -27,8 +27,7 @@ STORAGE_BUCKET_NAME = env('S3_BUCKET_NAME', default='default_bucket_name')
 S3_ENDPOINT_URL = env('S3_ENDPOINT_URL', default='https://default.endpoint.url')
 S3_LOCATION = env('S3_LOCATION', default='nyc3')
 
-
-def load_roi(roi_path):
+def load_roi(roi_path, s3_storage=None):
     """Load ROIs from path or CSV.
 
     Parameters
@@ -36,6 +35,9 @@ def load_roi(roi_path):
     roi_path : str
         Path to CSV containing paths to NIfTI images OR Path to directory containing
         NIfTI images OR Path to NIfTI image.
+    s3_storage : pfctoolkit.s3_tools.S3Storage, default None
+            S3Storage object, to be used if roi_path is a path to a file in the cloud.
+
 
     Returns
     -------
@@ -66,7 +68,7 @@ def load_roi(roi_path):
     return roi_paths
 
 
-def get_chunks(rois, config):
+def get_chunks(rois, config, s3_storage=None):
     """Get list of dicts containing Chunks to load and their associated ROIs
 
     Parameters
@@ -75,6 +77,8 @@ def get_chunks(rois, config):
         List of paths to ROIs to find chunks for.
     config : Config
         Configuration object.
+    s3_storage : pfctoolkit.s3_tools.S3Storage, default None
+            S3Storage object, to be used if chunk_idx is a file in the cloud.
 
     Returns
     -------
@@ -200,7 +204,7 @@ class NiftiMasker:
 
     """
 
-    def __init__(self, mask_img=None):
+    def __init__(self, mask_img=None, s3_storage=None):
         """
 
         Parameters
@@ -209,15 +213,24 @@ class NiftiMasker:
             If string, consider it as a path to NIfTI image and call `nibabel.load()` on
             it. The '~' symbol is expanded to the user home folder. If it is an object,
             check if affine attribute is present, raise `TypeError` otherwise.
+        s3_storage : pfctoolkit.s3_tools.S3Storage, default None
+            S3Storage object, to be used if mask_img is a path to a file in the cloud.
 
         """
+        if s3_storage and isinstance(mask_img, str):
+            mask_img = s3_storage.get_file_from_cloud(mask_img)
+
+        if isinstance(mask_img, str) and not os.path.exists(mask_img):
+            raise ValueError(f"Local file not found at path: {mask_img}.")
+
         self.mask_img = check_niimg(mask_img)
+        # self.mask_img = check_niimg(mask_img)
         self.mask_data = self.mask_img.get_fdata().astype(np.float32)
         (self.mask_idx,) = np.where((self.mask_data != 0).flatten())
         self.mask_shape = self.mask_data.shape
         self.mask_size = np.prod(self.mask_shape)
 
-    def transform(self, niimg=None, weight=False):
+    def transform(self, niimg=None, weight=False, s3_storage=None):
         """Masks 3D Nifti file into 1D array. Retypes to float32.
 
         Parameters
@@ -229,6 +242,8 @@ class NiftiMasker:
         weight : bool, default False
             If True, transform the niimg with weighting. If False, transform the niimg
             without weighting.
+        s3_storage : pfctoolkit.s3_tools.S3Storage, default None
+            S3Storage object, to be used if niimg is a path to a file in the cloud.
 
         Returns
         -------
@@ -236,6 +251,8 @@ class NiftiMasker:
             Masked Nifti file.
 
         """
+        if s3_storage and isinstance(niimg, str):
+            niimg = s3_storage.get_file_from_cloud(niimg)
         niimg = np.nan_to_num(check_niimg(niimg).get_fdata()).astype(np.float32)
         if weight:
             img = np.multiply(self.mask_data, niimg)

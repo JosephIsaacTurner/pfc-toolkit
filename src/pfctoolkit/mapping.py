@@ -51,7 +51,7 @@ def process_chunk(chunk, rois, config, stat):
         brain_masker = surface.GiftiMasker(datasets.get_img(config.get("mask")))
         chunk_masker = surface.GiftiMasker(
             surface.new_gifti_image(
-                datasets.get_img(config.get("chunk_idx")).agg_data() == chunk
+                s3_storage.get_file_from_cloud(config.get("chunk_idx")).agg_data() == chunk
             )
         )
 
@@ -173,10 +173,12 @@ def publish_atlas(atlas, output_dir, config, stat, save_to_dir=True):
         List of dictionaries, each containing {'subject_name': Nifti1Image} pairs
         for all processed images.
     """
-    output_dir = os.path.abspath(output_dir)
+    if not s3_storage:
+        output_dir = os.path.abspath(output_dir)
+
     image_type = config.get("type")
     if image_type == "volume":
-        brain_masker = tools.NiftiMasker(datasets.get_img(config.get("mask")))
+        brain_masker = tools.NiftiMasker(datasets.get_img(config.get("mask")), s3_storage)
         extension = ".nii.gz"
     elif image_type == "surface":
         brain_masker = surface.GiftiMasker(datasets.get_img(config.get("mask")))

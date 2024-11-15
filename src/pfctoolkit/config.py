@@ -46,6 +46,7 @@ class Config:
                 raise OSError(f"Config {self.config['name']} unavailable")
         except FileNotFoundError:
             raise FileNotFoundError(f"PCC config file {configfile} does not exist!")
+            
 
     def check(self):
         """Check that all resources specified in config file are accessible and exist.
